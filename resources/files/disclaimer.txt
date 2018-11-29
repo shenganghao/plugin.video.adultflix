@@ -1,0 +1,10 @@
+[COLOR deeppink]Adults Only[/COLOR]
+
+[COLOR white]This Kodi addon contains age-restricted materials. By entering this Kodi addon, you swear
+under penalty of perjury that you are over the age of 18, and over the age of majority in the location
+from where you are accessing this Kodi addon. 
+
+If you are under the age of 18 years, or under the age of majority in the location from where you are
+accessing this Kodi addon, you do not have authorization or permission to use.
+[/COLOR]
+[COLOR pink]Press Escape or Back to Continue[/COLOR]

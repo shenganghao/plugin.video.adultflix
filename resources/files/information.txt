@@ -1,0 +1,16 @@
+Welcome to AdultFlix
+
+[B]IF YOU DO NOT READ THIS MESSAGE, YOU WILL NOT RECEIVE ALL OF THE BENEFITS ADULTFLIX HAS TO OFFER![/B]
+
+Features:
+
+AdultFlix offers many features including downloads, favorites, history and more.
+
+To receive the benefits of these features you must toggle the context menu.
+
+If you toggle the context menu on a video you will have the option to download, add to favorites etc.
+You can also remove search terms, remove history items, download from history and more but you must toggle the context menu to do this.
+
+Within the AdultFlix settings, there are many options you may choose from. For example AdultFlix will return numerous video source quality options for certain scrapers. You may select auto play, which will always choose the highest quality link found.
+
+There is also a Mobile Option. Enabling this will select the low quality links automatically to save on mobile data usage.
