@@ -1,143 +1,189 @@
-import xbmc,xbmcgui,os,re,urllib,time
-import adultresolver
-adultresolver = adultresolver.streamer()
-import kodi
-import xbmcaddon, os
-import client
-import utils
-import history
-import log_utils
-import downloader
-import resolveurl, xbmcvfs
-xxx_plugins_path = 'special://home/addons/script.module.resolveurl.xxx/resources/plugins/'
-if xbmcvfs.exists(xxx_plugins_path): resolveurl.add_plugin_dirs(xbmc.translatePath(xxx_plugins_path))
+# -*- coding: utf-8 -*-
 
-@utils.url_dispatcher.register('801', ['url'], ['name', 'iconimage', 'pattern']) 
+'''
+    AdultFlix XXX Addon (18+) for the Kodi Media Center
+    Kodi is a registered trademark of the XBMC Foundation.
+    We are not connected to or in any other way affiliated with Kodi - DMCA: legal@tvaddons.co
+    Support: https://github.com/tvaddonsco/plugin.video.adultflix
+
+        License summary below, for more details please read license.txt file
+
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 2 of the License, or
+        (at your option) any later version.
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <http://www.gnu.org/licenses/>.
+'''
+from __future__ import absolute_import
+
+from resources.lib.modules import adultresolver
+import re
+import time
+import six
+unquote_plus = six.moves.urllib.parse.unquote_plus
+from kodi_six import xbmc, xbmcgui, xbmcvfs
+
+adultresolver = adultresolver.streamer()
+from packlib import kodi, client, log_utils
+from resources.lib.modules import history, local_utils
+from resolveurl import add_plugin_dirs, hmf
+
+xxx_plugins_path = 'special://home/addons/script.module.resolveurl.xxx/resources/plugins/'
+if xbmcvfs.exists(xxx_plugins_path):
+    add_plugin_dirs(xbmc.translatePath(xxx_plugins_path))
+
+
+@local_utils.url_dispatcher.register('801', ['url'], ['name', 'iconimage', 'pattern'])
 def resolve_url(url, name=None, iconimage=None, pattern=None):
 
     kodi.busy()
-    
-    try: url,site = url.split('|SPLIT|')
-    except: 
-        site = 'Unknown'
-        log_utils.log('Error getting site information from :: %s' % (url), log_utils.LOGERROR)
-    
-    if not name: name = 'Unknown'
-    if not iconimage: iconimage = kodi.addonicon
-    name = re.sub(r'(\[.+?\])','',name); name = name.lstrip()
-    if '] - ' in name: name = name.split('] - ')[-1] 
-    if 'site=' in url: url,site = url.split('site=')
 
-    if '|CHAT|' in url: 
-        url,site,name = url.split('|CHAT|')
-    if '- [' in name: 
+    try:
+        url, site = url.split('|SPLIT|')
+    except:
+        site = 'Unknown'
+        log_utils.log('Error getting site information from :: %s' % (url), xbmc.LOGERROR)
+
+    if not name:
+        name = 'Unknown'
+    if not iconimage:
+        iconimage = kodi.addonicon
+    name = re.sub(r'(\[.+?\])', '', name)
+    name = name.lstrip()
+    if '] - ' in name:
+        name = name.split('] - ')[-1]
+    if 'site=' in url:
+        url, site = url.split('site=')
+
+    if '|CHAT|' in url:
+        url, site, name = url.split('|CHAT|')
+    if '- [' in name:
         name = name.split('- [')[0]
 
     u = None
-    log_utils.log('Sending %s to XXX Resolver' % (url), log_utils.LOGNOTICE)
-    if resolveurl.HostedMediaFile(url).valid_url(): 
-        log_utils.log('%s is a valid SMR resolvable URL. Attempting to resolve.' % (url), log_utils.LOGNOTICE)
+    log_utils.log('Sending %s to XXX Resolver' % (url), xbmc.LOGNOTICE)
+    if hmf.HostedMediaFile(url).valid_url():
+        log_utils.log('%s is a valid SMR resolvable URL. Attempting to resolve.' % (url), xbmc.LOGNOTICE)
         try:
-            u = resolveurl.HostedMediaFile(url).resolve()
+            u = hmf.HostedMediaFile(url).resolve()
         except Exception as e:
-            log_utils.log('Error getting valid link from SMR :: %s :: %s' % (url, str(e)), log_utils.LOGERROR)
+            log_utils.log('Error getting valid link from SMR :: %s :: %s' % (url, str(e)), xbmc.LOGERROR)
             kodi.idle()
             kodi.notify(msg='Something went wrong!  | %s' % str(e), duration=8000, sound=True)
             quit()
-        log_utils.log('Link returned by XXX Resolver :: %s' % (u), log_utils.LOGNOTICE)
+        log_utils.log('Link returned by XXX Resolver :: %s' % (u), xbmc.LOGNOTICE)
     else:
-        log_utils.log('%s is not a valid SMR resolvable link. Attempting to resolve by AdultFlix backup resolver.' % (url), log_utils.LOGNOTICE)
+        log_utils.log('%s is not a valid SMR resolvable link. Attempting to resolve by AdultFlix backup resolver.' % (url), xbmc.LOGNOTICE)
         try:
             u = adultresolver.resolve(url)
             if u:
-                if resolveurl.HostedMediaFile(u).valid_url(): 
-                    u = resolveurl.HostedMediaFile(u).resolve()            
+                if hmf.HostedMediaFile(u).valid_url():
+                    u = hmf.HostedMediaFile(u).resolve()
         except Exception as e:
-            log_utils.log('Error getting valid link from SMR :: %s :: %s' % (url, str(e)), log_utils.LOGERROR)
+            log_utils.log('Error getting valid link from SMR :: %s :: %s' % (url, str(e)), xbmc.LOGERROR)
             kodi.idle()
             kodi.notify(msg='Something went wrong!  | %s' % str(e), duration=8000, sound=True)
             quit()
-        log_utils.log('%s returned by AdultFlix backup resolver.' % (u), log_utils.LOGNOTICE)
+        log_utils.log('%s returned by AdultFlix backup resolver.' % (u), xbmc.LOGNOTICE)
     if u == 'offline':
         kodi.idle()
-        kodi.notify(msg='This performer is offline.', duration = 5000, sound = True)
+        kodi.notify(msg='This performer is offline.', duration=5000, sound=True)
         quit()
     if u:
         kodi.idle()
-        play(u,name,iconimage,url,site)
-    else: 
+        play(u, name, iconimage, url, site)
+    else:
         kodi.idle()
-        log_utils.log('Failed to get any playable link for :: %s' % (url), log_utils.LOGERROR)
+        log_utils.log('Failed to get any playable link for :: %s' % (url), xbmc.LOGERROR)
         kodi.notify(msg='Failed to get any playable link.', duration=7500, sound=True)
         quit()
 
-@utils.url_dispatcher.register('803', ['url','name'], ['iconimage','ref', 'site']) 
-def play(url, name, iconimage=None, ref=None, site=None):
 
+@local_utils.url_dispatcher.register('803', ['url', 'name'], ['iconimage', 'ref', 'site'])
+def play(url, name, iconimage=None, ref=None, site=None):
     try:
         kodi.busy()
-        
-        if not site: 
-            if 'site=' in url: url,site = url.split('site=')
-            else: site = 'Unknown'
+
+        if not site:
+            if 'site=' in url:
+                url, site = url.split('site=')
+            else:
+                site = 'Unknown'
         if not name: name = 'Unknown'
         if not iconimage: iconimage = kodi.addonicon
-        name = re.sub(r'(\[.+?\])','',name); name = name.lstrip()
-        if '] - ' in name: name = name.split('] - ')[-1] 
+        name = re.sub(r'(\[.+?\])', '', name)
+        name = name.lstrip()
+        if '] - ' in name: name = name.split('] - ')[-1]
 
         chatur = False
-        
+
         if ref:
             if 'chaturbate.com' in ref:
                 chatur = True
-        else: ref = ''
+        else:
+            ref = ''
         if 'chaturbate.com' in url:
             chatur = True
             ref = url
             url = adultresolver.resolve(url)
-        if ( isinstance(url, list) ): 
-            try: url = multilinkselector(url)
-            except: pass
-            
-        history_on_off  = kodi.get_setting("history_setting")
+        if (isinstance(url, list)):
+            try:
+                url = multilinkselector(url)
+            except:
+                pass
+
+        history_on_off = kodi.get_setting("history_setting")
         if history_on_off == "true":
-            web_checks = ['http:','https:','rtmp:']
+            web_checks = ['http:', 'https:', 'rtmp:']
             locak_checks = ['.mp4']
             try:
-                if any(f for f in web_checks if f in url): site = site.title()
-                elif any(f for f in locak_checks if f in url): site = 'Local File'
-                else: site = 'Unknown'
-            except: site = site.title()
-            
-            #if chatur:
+                if any(f for f in web_checks if f in url):
+                    site = site.title()
+                elif any(f for f in locak_checks if f in url):
+                    site = 'Local File'
+                else:
+                    site = 'Unknown'
+            except:
+                site = site.title()
+
+            # if chatur:
             history.delEntry(ref)
             history.addHistory(name, ref, site.title(), iconimage)
-            #else:
+            # else:
             #    history.delEntry(url)
             #    history.addHistory(name, url, site.title(), iconimage)
-                
+
         kodi.idle()
 
         if 'chaturbate.com' in ref:
             if kodi.get_setting("mobile_mode") == 'true':
-                url = url.replace('_fast_aac','_aac')
+                url = url.replace('_fast_aac', '_aac')
             else:
                 bandwidth = kodi.get_setting("chaturbate_band")
-                if bandwidth == '0': url = url.replace('_fast_aac','_aac')
+                if bandwidth == '0':
+                    url = url.replace('_fast_aac', '_aac')
                 elif bandwidth == '2':
-                    choice = kodi.dialog.select("[COLOR white][B]" + name + "[/B][/COLOR]", ['[COLOR white]Play High Bandwidth Stream[/COLOR]','[COLOR white]Play Low Bandwidth Stream[/COLOR]'])
-                    if choice == 1: url = url.replace('_fast_aac','_aac')
-                    elif choice == 0: pass
-                    else: quit()
+                    choice = kodi.dialog.select("[COLOR white][B]" + name + "[/B][/COLOR]", ['[COLOR white]Play High Bandwidth Stream[/COLOR]', '[COLOR white]Play Low Bandwidth Stream[/COLOR]'])
+                    if choice == 1:
+                        url = url.replace('_fast_aac', '_aac')
+                    elif choice == 0:
+                        pass
+                    else:
+                        quit()
 
             liz = xbmcgui.ListItem(name, iconImage=iconimage, thumbnailImage=iconimage)
             xbmc.executebuiltin("Dialog.Close(busydialog)")
             xbmc.Player().play(url, liz, False)
-            
+
             if kodi.get_setting("chaturbate_subject") == "true":
                 sleeper = kodi.get_setting("chaturbate_subject_refresh")
                 i = 0
-                    
+
                 while not xbmc.Player().isPlayingVideo():
                     time.sleep(1)
                     i += 1
@@ -145,9 +191,11 @@ def play(url, name, iconimage=None, ref=None, site=None):
                 while xbmc.Player().isPlayingVideo():
                     try:
                         r = client.request(ref)
-                        subject = re.compile('default_subject:\s\"([^,]+)",').findall(r)[0]; subject = urllib.unquote_plus(subject)
+                        subject = re.compile('default_subject:\s\"([^,]+)",').findall(r)[0]
+                        subject = unquote_plus(subject)
                         kodi.notify(msg=subject, duration=8500, sound=True, icon_path=iconimage)
-                    except: pass
+                    except:
+                        pass
                     time.sleep(int(sleeper))
         else:
             liz = xbmcgui.ListItem(name, iconImage=iconimage, thumbnailImage=iconimage)
@@ -155,39 +203,42 @@ def play(url, name, iconimage=None, ref=None, site=None):
     except:
         kodi.idle()
         kodi.notify(msg='Error playing %s' % name)
-        
-def multilinkselector(url):
 
+
+def multilinkselector(url):
     try:
-        if len(url) == 1: url = url[0][1]
+        if len(url) == 1:
+            url = url[0][1]
         else:
             sources = []
 
             for i in url:
                 smu_file = False
                 try:
-                    if i[2]: smu_file=True
-                except: pass
-                if ( not smu_file ):
+                    if i[2]: smu_file = True
+                except:
+                    pass
+                if (not smu_file):
                     c = client.request(i[1], output='headers')
-                    sources += [(i[0],kodi.convertSize(int(c['Content-Length'])),i[1])]
-                else: 
+                    sources += [(i[0], kodi.convertSize(int(c['Content-Length'])), i[1])]
+                else:
                     try:
                         pattern = r'''(?:)(?:http|https)(?:\:\/\/|\:\/\/www.)([^\.]+)'''
-                        domain = re.match(pattern,i[1])
+                        domain = re.match(pattern, i[1])
                         domain = domain.group(1).title()
-                    except: domain = 'Resolve URL Link'
-                    sources += [(i[0],domain,i[1])]
+                    except:
+                        domain = 'Resolve URL Link'
+                    sources += [(i[0], domain, i[1])]
 
-                quals = []
-                srcs  = []
-                
+            quals = []
+            srcs = []
+
             for i in sources:
-                qual = '%s - [ %s ]' % (i[0],i[1])
-                quals.append(kodi.giveColor(qual,'white',True))
+                qual = '%s - [ %s ]' % (i[0], i[1])
+                quals.append(kodi.giveColor(qual, 'white', True))
                 srcs.append(i[2])
 
-            selected = kodi.dialog.select('Select a quality.',quals)
+            selected = kodi.dialog.select('Select a quality.', quals)
             if selected < 0:
                 kodi.notify(msg='No option selected.')
                 return 'quit'
@@ -195,14 +246,16 @@ def multilinkselector(url):
                 url = srcs[selected]
         kodi.busy()
         try:
-            if resolveurl.HostedMediaFile(url).valid_url(): 
-                url = resolveurl.HostedMediaFile(url).resolve()
-        except: pass
+            if hmf.HostedMediaFile(url).valid_url():
+                url = hmf.HostedMediaFile(url).resolve()
+        except:
+            pass
         kodi.idle()
         return url
-    except: 
+    except:
         try:
-            if resolveurl.HostedMediaFile(url[0][1]).valid_url(): 
-                url = resolveurl.HostedMediaFile(url[0][1]).resolve()
+            if hmf.HostedMediaFile(url[0][1]).valid_url():
+                url = hmf.HostedMediaFile(url[0][1]).resolve()
             return url
-        except: pass
+        except:
+            pass

@@ -1,36 +1,71 @@
-import xbmc,xbmcgui,os
-import urllib
+# -*- coding: utf-8 -*-
+
+'''
+    AdultFlix XXX Addon (18+) for the Kodi Media Center
+    Kodi is a registered trademark of the XBMC Foundation.
+    We are not connected to or in any other way affiliated with Kodi - DMCA: legal@tvaddons.co
+    Support: https://github.com/tvaddonsco/plugin.video.adultflix
+
+        License summary below, for more details please read license.txt file
+
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 2 of the License, or
+        (at your option) any later version.
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <http://www.gnu.org/licenses/>.
+'''
+from __future__ import absolute_import
 import time
-import adultresolver
-adultresolver = adultresolver.streamer()
-from urllib import FancyURLopener
-import sys
-import kodi
-import log_utils
-import utils
-import player
-import client
+
+from resources.lib.modules import adultresolver
+import os
+from packlib import kodi, log_utils, client
+from resources.lib.modules import local_utils
 import sqlite3
-buildDirectory = utils.buildDir
-import resolveurl, xbmcvfs
+from kodi_six import xbmc, xbmcvfs
+from resolveurl import add_plugin_dirs, hmf
+import six
+
+from resources.lib.modules.player import multilinkselector
+
+adultresolver = adultresolver.streamer()
+
+URLopener = six.moves.urllib.request.URLopener
+quote_plus = six.moves.urllib.parse.quote_plus
+unquote_plus = six.moves.urllib.parse.unquote_plus
+
+
+buildDirectory = local_utils.buildDir
+
+
 xxx_plugins_path = 'special://home/addons/script.module.resolveurl.xxx/resources/plugins/'
-if xbmcvfs.exists(xxx_plugins_path): resolveurl.add_plugin_dirs(xbmc.translatePath(xxx_plugins_path))
+
+if xbmcvfs.exists(xxx_plugins_path):
+    add_plugin_dirs(xbmc.translatePath(xxx_plugins_path))
 
 download_icon = xbmc.translatePath(os.path.join('special://home/addons/script.adultflix.artwork/resources/art/main', 'downloads.png'))
 
-class MyOpener(FancyURLopener):
+
+class MyOpener(URLopener):
     version = 'python-requests/2.9.1'
+
 
 myopener = MyOpener()
 urlretrieve = MyOpener().retrieve
 urlopen = MyOpener().open
-download_location   = kodi.get_setting("download_location")
+download_location = kodi.get_setting("download_location")
 download_folder = xbmc.translatePath(download_location)
 
 databases = xbmc.translatePath(os.path.join(kodi.datafolder, 'databases'))
 downloaddb = xbmc.translatePath(os.path.join(databases, 'downloads.db'))
 
-if ( not os.path.exists(databases)): os.makedirs(databases)
+if not os.path.exists(databases):
+    os.makedirs(databases)
 conn = sqlite3.connect(downloaddb)
 c = conn.cursor()
 try:
@@ -39,30 +74,35 @@ except:
     pass
 conn.close()
 
-@utils.url_dispatcher.register('27')
+
+@local_utils.url_dispatcher.register('27')
 def getDownloads():
 
-    if ( not os.path.exists(download_folder) ): os.makedirs(download_folder)
+    if not os.path.exists(download_folder):
+        os.makedirs(download_folder)
 
     dirlist = []
     lst = [
-           (kodi.giveColor('Download Location: ','white')+'file_path'+kodi.giveColor(str(download_folder),'violet'),None,19,download_icon,False), \
-           (kodi.giveColor('Change Download Location','white'),None,19,download_icon,False), \
-           ('-----------------------------------------------',None,999,download_icon,False) \
-          ]
-          
+        (kodi.giveColor('Download Location: ', 'white') + 'file_path' + kodi.giveColor(str(download_folder), 'violet'),
+         None, 19, download_icon, False),
+        (kodi.giveColor('Change Download Location', 'white'), None, 19, download_icon, False),
+        ('-----------------------------------------------', None, 999, download_icon, False)
+        ]
+
     extensions = ['.mp4']
 
     for file in os.listdir(download_folder):
         for extension in extensions:
             if file.endswith('.tmp_mp4'):
-                try: os.remove(os.path.join(download_folder, file))
-                except: pass
+                try:
+                    os.remove(os.path.join(download_folder, file))
+                except:
+                    pass
             if file.endswith(extension):
-                name = urllib.unquote_plus(file)
+                name = unquote_plus(file)
                 lst += [
-                        (kodi.giveColor(str(name),'white'),os.path.join(download_folder, file),803,None,True), \
-                       ]
+                    (kodi.giveColor(str(name), 'white'), os.path.join(download_folder, file), 803, None, True),
+                    ]
 
     conn = sqlite3.connect(downloaddb)
     conn.text_factory = str
@@ -71,22 +111,29 @@ def getDownloads():
         find_string = i[0]
         if i[1]:
             try:
-                find_string = find_string.replace('.mp4','')
+                find_string = find_string.replace('.mp4', '')
                 find_string = kodi.stripColor(find_string)
-                c.execute("SELECT image FROM downloads WHERE name = '%s'" % find_string)                       
+                c.execute("SELECT image FROM downloads WHERE name = '%s'" % find_string)
                 icon = c.fetchone()[0]
-            except: icon = None
-        else: icon = i[3]
-        dirlist.append({'name': find_string, 'url': i[1], 'mode': i[2], 'icon': icon, 'fanart': None, 'folder': False, 'isDownloaded': i[4]})
+            except:
+                icon = None
+        else:
+            icon = i[3]
+        dirlist.append({'name': find_string, 'url': i[1], 'mode': i[2], 'icon': icon, 'fanart': None, 'folder': False,
+                        'isDownloaded': i[4]})
 
-    if c: c.close()
-    
+    if c:
+        c.close()
+
     if len(lst) < 4:
-        dirlist.append({'name': kodi.giveColor('No Downloads Found','white'), 'url': 'None', 'mode': 999, 'icon': download_icon, 'fanart': None, 'folder': False})
+        dirlist.append(
+            {'name': kodi.giveColor('No Downloads Found', 'white'), 'url': 'None', 'mode': 999, 'icon': download_icon,
+             'fanart': None, 'folder': False})
 
-    buildDirectory(dirlist)    
-    
-def addDownload(name,url,img):
+    buildDirectory(dirlist)
+
+
+def addDownload(name, url, img):
     conn = sqlite3.connect(downloaddb)
     conn.text_factory = str
     c = conn.cursor()
@@ -94,28 +141,29 @@ def addDownload(name,url,img):
     conn.commit()
     conn.close()
 
-@utils.url_dispatcher.register('28', ['url','name'])
-def removeDownload(url, name):
 
+@local_utils.url_dispatcher.register('28', ['url', 'name'])
+def removeDownload(url, name):
     try:
         os.remove(url)
         try:
-            name = name.replace('.mp4','')
+            name = name.replace('.mp4', '')
             name = kodi.stripColor(name)
             conn = sqlite3.connect(downloaddb)
             c = conn.cursor()
             c.execute("DELETE FROM downloads WHERE name = '%s'" % name)
             conn.commit()
             conn.close()
-        except: pass
+        except:
+            pass
         kodi.notify(msg='Removed successfully.')
     except:
         kodi.notify(msg='Error removing file.')
     xbmc.executebuiltin("Container.Refresh")
-    
-@utils.url_dispatcher.register('26',['url', 'name', 'iconimage'])
-def find_link(url, name, iconimage, downloadableLink=False):
 
+
+@local_utils.url_dispatcher.register('26', ['url', 'name', 'iconimage'])
+def find_link(url, name, iconimage, downloadableLink=False):
     xbmc.executebuiltin("ActivateWindow(busydialog)")
 
     if '|SPLIT|' in url: url = url.split('|SPLIT|')[0]
@@ -124,13 +172,13 @@ def find_link(url, name, iconimage, downloadableLink=False):
 
     c = client.request(url, output='headers')
 
-    checks = ['video','mpegurl']
-    exts = ['.mp4','.flv','.m3u8']
+    checks = ['video', 'mpegurl']
+    exts = ['.mp4', '.flv', '.m3u8']
 
     try:
         if any(f for f in checks if f in c['Content-Type']): downloadableLink = True
     except:
-        if any(f for f in exts if f in url): 
+        if any(f for f in exts if f in url):
             downloadableLink = True
         else:
             xbmc.executebuiltin("Dialog.Close(busydialog)")
@@ -141,100 +189,106 @@ def find_link(url, name, iconimage, downloadableLink=False):
     if '] -' in name: name = name.split('] -')[1]
     if downloadableLink:
         dest = getDest()
-        dest = os.path.join(dest, '%s.mp4' % urllib.quote_plus(name))
-        download(url,name,iconimage,dest)
+        dest = os.path.join(dest, '%s.mp4' % quote_plus(name))
+        download(url, name, iconimage, dest)
     else:
         u = None
-        log_utils.log('Sending %s to XXX Resolver' % (url), log_utils.LOGNOTICE)
-        if resolveurl.HostedMediaFile(url).valid_url(): 
-            log_utils.log('%s is a valid SMR resolvable URL. Attempting to resolve.' % (url), log_utils.LOGNOTICE)
+        log_utils.log('Sending %s to XXX Resolver' % (url), xbmc.LOGNOTICE)
+        if hmf.HostedMediaFile(url).valid_url():
+            log_utils.log('%s is a valid SMR resolvable URL. Attempting to resolve.' % (url), xbmc.LOGNOTICE)
             try:
-                u = resolveurl.HostedMediaFile(url).resolve()
+                u = hmf.HostedMediaFile(url).resolve()
             except Exception as e:
-                log_utils.log('Error getting valid link from SMR :: %s :: %s' % (url, str(e)), log_utils.LOGERROR)
+                log_utils.log('Error getting valid link from SMR :: %s :: %s' % (url, str(e)), xbmc.LOGERROR)
                 kodi.idle()
                 kodi.notify(msg='Something went wrong!  | %s' % str(e), duration=8000, sound=True)
                 quit()
-            log_utils.log('Link returned by XXX Resolver :: %s' % (u), log_utils.LOGNOTICE)
+            log_utils.log('Link returned by XXX Resolver :: %s' % (u), xbmc.LOGNOTICE)
         else:
-            log_utils.log('%s is not a valid SMR resolvable link. Attempting to resolve by AdultFlix backup resolver.' % (url), log_utils.LOGNOTICE)
+            log_utils.log(
+                '%s is not a valid SMR resolvable link. Attempting to resolve by AdultFlix backup resolver.' % (url),
+                xbmc.LOGNOTICE)
             try:
                 u = adultresolver.resolve(url)
             except Exception as e:
-                log_utils.log('Error getting valid link from SMR :: %s :: %s' % (url, str(e)), log_utils.LOGERROR)
+                log_utils.log('Error getting valid link from SMR :: %s :: %s' % (url, str(e)), xbmc.LOGERROR)
                 kodi.idle()
                 kodi.notify(msg='Something went wrong!  | %s' % str(e), duration=8000, sound=True)
                 quit()
-            log_utils.log('%s returned by AdultFlix backup resolver.' % (u), log_utils.LOGNOTICE)
-        if (not isinstance(u, str)): 
+            log_utils.log('%s returned by AdultFlix backup resolver.' % (u), xbmc.LOGNOTICE)
+        if not isinstance(u, str):
             try:
                 u = multilinkselector(u)
-            except: pass       
-        if u == 'quit': 
-                xbmc.executebuiltin("Dialog.Close(busydialog)")
-                quit()
-        if u: 
+            except:
+                pass
+        if u == 'quit':
+            xbmc.executebuiltin("Dialog.Close(busydialog)")
+            quit()
+        if u:
             dest = getDest()
-            dest = os.path.join(dest, '%s.tmp_mp4' % urllib.quote_plus(name))
-            download(u,name,iconimage,dest)
+            dest = os.path.join(dest, '%s.tmp_mp4' % quote_plus(name))
+            download(u, name, iconimage, dest)
         else:
             xbmc.executebuiltin("Dialog.Close(busydialog)")
             kodi.notify('No Downloadable Link Found.')
             quit()
 
-def getDest():
 
-    if ( not os.path.exists(download_folder) ):
+def getDest():
+    if (not os.path.exists(download_folder)):
         try:
             os.makedirs(download_folder)
         except:
             kodi.notify('Error creating download folder.')
             quit()
-    if ( not download_folder ):
+    if (not download_folder):
         kodi.notify('Error getting destination location.')
         quit()
     return download_folder
-    
-def download(url, name, icon, dest, dp = None):
+
+
+def download(url, name, icon, dest, dp=None):
     xbmc.executebuiltin("Dialog.Close(busydialog)")
-    if '|' in url: url = url.split('|')[0]
-    if not dp: 
+    if '|' in url:
+        url = url.split('|')[0]
+    if not dp:
         dp = kodi.dp
-        dp.create(kodi.get_name(),"Downloading: %s" % name,' ', ' ')
+        dp.create(kodi.get_name(), "Downloading: %s" % name, ' ', ' ')
     dp.update(0)
-    start_time=time.time()
-    log_utils.log('Attempting to download :: %s' % url, log_utils.LOGNOTICE)
-    urlretrieve(url, dest, lambda nb, bs, fs: _pbhook(dest,nb, bs, fs, dp, start_time))
+    start_time = time.time()
+    log_utils.log('Attempting to download :: %s' % url, xbmc.LOGNOTICE)
+    urlretrieve(url, dest, lambda nb, bs, fs: _pbhook(dest, nb, bs, fs, dp, start_time))
     addDownload(name, url, icon)
     kodi.notify(msg='Download Complete', sound=True)
-    log_utils.log('Download complete.', log_utils.LOGNOTICE)
+    log_utils.log('Download complete.', xbmc.LOGNOTICE)
     finish_up(dest)
-    
-def finish_up(dest):
-    new = dest.replace('.tmp_mp4','.mp4')
-    os.rename(dest,new)
-    
-def _pbhook(dest,numblocks, blocksize, filesize, dp, start_time):
 
-    try: 
+
+def finish_up(dest):
+    new = dest.replace('.tmp_mp4', '.mp4')
+    os.rename(dest, new)
+
+
+def _pbhook(dest, numblocks, blocksize, filesize, dp, start_time):
+    try:
         if filesize <= 0:
             kodi.notify(msg='Invalid downloadable file', sound=True)
-            log_utils.log('Error downloading video.', log_utils.LOGERROR)
+            log_utils.log('Error downloading video.', xbmc.LOGERROR)
             quit()
-        percent = min(numblocks * blocksize * 100 / filesize, 100) 
-        currently_downloaded = float(numblocks) * blocksize / (1024 * 1024) 
-        kbps_speed = numblocks * blocksize / (time.time() - start_time) 
-        if kbps_speed > 0: 
-            eta = (filesize - numblocks * blocksize) / kbps_speed 
-        else: 
-            eta = 0 
-        kbps_speed = kbps_speed / 1024 
-        mbps_speed = kbps_speed / 1024 
-        total = float(filesize) / (1024 * 1024) 
+        percent = min(numblocks * blocksize * 100 / filesize, 100)
+        currently_downloaded = float(numblocks) * blocksize / (1024 * 1024)
+        kbps_speed = numblocks * blocksize / (time.time() - start_time)
+        if kbps_speed > 0:
+            eta = (filesize - numblocks * blocksize) / kbps_speed
+        else:
+            eta = 0
+        kbps_speed = kbps_speed / 1024
+        mbps_speed = kbps_speed / 1024
+        total = float(filesize) / (1024 * 1024)
         mbs = '[COLOR dodgerblue]%.02f MB[/COLOR] of [B]%.02f MB[/B]' % (currently_downloaded, total)
-        e = '[COLOR white][B]Speed: [/B][/COLOR][COLOR dodgerblue]%.02f Mb/s ' % mbps_speed  + '[/COLOR]'
-        e += '[COLOR white][B]ETA: [/B][/COLOR][COLOR dodgerblue]%02d:%02d' % divmod(eta, 60)  + '[/COLOR]'
-        dp.update(percent,'', mbs, e)
+        e = '[COLOR white][B]Speed: [/B][/COLOR][COLOR dodgerblue]%.02f Mb/s ' % mbps_speed + '[/COLOR]'
+        e += '[COLOR white][B]ETA: [/B][/COLOR][COLOR dodgerblue]%02d:%02d' % divmod(eta, 60) + '[/COLOR]'
+        dp.update(percent, '', mbs, e)
     except:
         dp.close()
         kodi.notify(msg='Error Downloading. Exiting...')

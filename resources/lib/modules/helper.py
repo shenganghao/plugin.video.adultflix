@@ -1,69 +1,127 @@
-import xbmc,xbmcplugin,os,re,urlparse
-import kodi
-import client
-import cache
-import dom_parser2
-import log_utils
-import utils
-buildDirectory = utils.buildDir
+# -*- coding: utf-8 -*-
+
+'''
+    AdultFlix XXX Addon (18+) for the Kodi Media Center
+    Kodi is a registered trademark of the XBMC Foundation.
+    We are not connected to or in any other way affiliated with Kodi - DMCA: legal@tvaddons.co
+    Support: https://github.com/tvaddonsco/plugin.video.adultflix
+
+        License summary below, for more details please read license.txt file
+
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 2 of the License, or
+        (at your option) any later version.
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <http://www.gnu.org/licenses/>.
+'''
+from __future__ import absolute_import
+from packlib import cache, client, dom_parser2, kodi, log_utils
+import os
+import re
+import six
+urljoin = six.moves.urllib.parse.urljoin
+from resources.lib.modules import local_utils
+from kodi_six import xbmc, xbmcplugin
+
+buildDirectory = local_utils.buildDir
+
 
 class scraper:
 
-    def get_list(self, mode, type, url, title_pattern, url_pattern, icon_pattern=None, site=None, d_p1=None, d_p2=None, d_p3=None, parse=None, cache_time=None,searched=False,stopend=False, isVideo=False, isDownloadable = False):
+    def get_list(self, mode, type, url, title_pattern, url_pattern, icon_pattern=None, site=None, d_p1=None, d_p2=None,
+                 d_p3=None, parse=None, cache_time=None, searched=False, stopend=False, isVideo=False,
+                 isDownloadable=False):
 
-        if cache_time: r = cache.get(client.request,cache_time,url)
-        else: r = client.request(url)
+        if cache_time:
+            r = cache.get(client.request, cache_time, url)
+        else:
+            r = client.request(url)
 
         if 're|' in d_p3:
-            d_p3 = d_p3.replace('re|','')
+            d_p3 = d_p3.replace('re|', '')
             r = dom_parser2.parse_dom(r, d_p1, {d_p2: re.compile('%s' % d_p3)})
-        else: r = dom_parser2.parse_dom(r, d_p1, {d_p2: d_p3})
+        else:
+            r = dom_parser2.parse_dom(r, d_p1, {d_p2: d_p3})
 
         if r:
-        
-            dirlst = []
-            
-            for i in r:
-                    name = re.findall(r'%s' % title_pattern,i.content)[0]
-                    name = kodi.sortX(i[1].encode('utf-8'))
-                    url = re.findall(r'%s' % url_pattern,i.content)[0]
-                    if icon_pattern:
-                        iconimage = re.findall(r'%s' % icon_pattern,i.content)[0]
-                    elif site: iconimage = xbmc.translatePath(os.path.join('special://home/addons/script.adultflix.artwork', 'resources/art/%s/icon.png' % site))
-                    else: iconimage = xbmc.translatePath(os.path.join('special://home/addons/' + kodi.get_id(), 'icon.png'))
-                    fanarts = xbmc.translatePath(os.path.join('special://home/addons/script.adultflix.artwork', 'resources/art/%s/fanart.jpg' % site))
-                    if parse: 
-                        link,tag = parse.split('|SPLIT|')
-                        if tag == 'url': 
-                            url = urlparse.urljoin(link,url)
-                        elif tag == 'icon': 
-                            iconimage = urlparse.urljoin(link,iconimage)
-                        else:
-                            url = urlparse.urljoin(link,url)
-                            iconimage = urlparse.urljoin(link,iconimage)
-                    if site: url += '|SPLIT|' + site        
-                    if type == 'dir': dirlst.append({'name': kodi.giveColor(name,'white'), 'url': url, 'mode': mode, 'icon': iconimage, 'fanart': fanarts, 'description': name, 'folder': True})
-                    else: dirlst.append({'name': kodi.giveColor(name,'white'), 'url': url, 'mode': mode, 'icon': iconimage, 'fanart': fanarts, 'description': name, 'folder': False})
 
-            if dirlst: 
-                if stopend: buildDirectory(dirlst, stopend=True, isVideo=isVideo, isDownloadable=isDownloadable)
-                else: buildDirectory(dirlst, isVideo=isVideo, isDownloadable=isDownloadable)
+            dirlst = []
+
+            for i in r:
+                name = re.findall(r'%s' % title_pattern, i.content)[0]
+                name = kodi.sortX(i[1].encode('utf-8'))
+                url = re.findall(r'%s' % url_pattern, i.content)[0]
+                if icon_pattern:
+                    iconimage = re.findall(r'%s' % icon_pattern, i.content)[0]
+                elif site:
+                    iconimage = xbmc.translatePath(os.path.join('special://home/addons/script.adultflix.artwork', 'resources/art/%s/icon.png' % site))
+                else:
+                    iconimage = xbmc.translatePath(os.path.join('special://home/addons/' + kodi.get_id(), 'icon.png'))
+                fanarts = xbmc.translatePath(os.path.join('special://home/addons/script.adultflix.artwork', 'resources/art/%s/fanart.jpg' % site))
+                if parse:
+                    link, tag = parse.split('|SPLIT|')
+                    if tag == 'url':
+                        url = urljoin(link, url)
+                    elif tag == 'icon':
+                        iconimage = urljoin(link, iconimage)
+                    else:
+                        url = urljoin(link, url)
+                        iconimage = urljoin(link, iconimage)
+                if site: url += '|SPLIT|' + site
+                if type == 'dir':
+                    dirlst.append(
+                        {
+                            'name': kodi.giveColor(name, 'white'), 'url': url, 'mode': mode, 'icon': iconimage,
+                            'fanart': fanarts, 'description': name, 'folder': True
+                        }
+                    )
+                else:
+                    dirlst.append(
+                        {
+                            'name': kodi.giveColor(name, 'white'), 'url': url, 'mode': mode, 'icon': iconimage,
+                            'fanart': fanarts, 'description': name, 'folder': False
+                        }
+                    )
+
+            if dirlst:
+                if stopend:
+                    buildDirectory(dirlst, stopend=True, isVideo=isVideo, isDownloadable=isDownloadable)
+                else:
+                    buildDirectory(dirlst, isVideo=isVideo, isDownloadable=isDownloadable)
 
     def get_next_page(self, mode, url, pattern, site='', parse=None, pictures=False):
- 
+
         try:
             dirlst = []
-            icon = xbmc.translatePath(os.path.join('special://home/addons/script.adultflix.artwork', 'resources/art/main/next.png'))
-            fanart = xbmc.translatePath(os.path.join('special://home/addons/script.adultflix.artwork', 'resources/art/%s/fanart.jpg' % site))
-            if '|GOT_URL' in url: 
+            icon = xbmc.translatePath(
+                os.path.join('special://home/addons/script.adultflix.artwork', 'resources/art/main/next.png'))
+            fanart = xbmc.translatePath(
+                os.path.join('special://home/addons/script.adultflix.artwork', 'resources/art/%s/fanart.jpg' % site))
+            if '|GOT_URL' in url:
                 url = url.split('|GOT_URL')[0]
-                dirlst.append({'name': kodi.giveColor('Next Page -->','white'), 'url': url, 'mode': mode, 'icon': icon, 'fanart': fanart, 'description': 'Load More......', 'folder': True})
-            else: 
+                dirlst.append(
+                    {
+                        'name': kodi.giveColor('Next Page -->', 'white'), 'url': url, 'mode': mode, 'icon': icon,
+                        'fanart': fanart, 'description': 'Load More......', 'folder': True
+                    }
+                )
+            else:
                 r = client.request(url)
-                url = re.findall(r'%s' % pattern,r)[0]
-                if parse: url = urlparse.urljoin(parse,url)
-                if '&amp;' in url: url = url.replace('&amp;','&')
-                dirlst.append({'name': kodi.giveColor('Next Page -->','white'), 'url': url, 'mode': mode, 'icon': icon, 'fanart': fanart, 'description': 'Load More......', 'folder': True})
+                url = re.findall(r'%s' % pattern, r)[0]
+                if parse:
+                    url = urljoin(parse, url)
+                if '&amp;' in url: url = url.replace('&amp;', '&')
+                dirlst.append(
+                    {
+                        'name': kodi.giveColor('Next Page -->', 'white'), 'url': url, 'mode': mode, 'icon': icon,
+                        'fanart': fanart, 'description': 'Load More......', 'folder': True
+                    }
+                )
             if 'chaturbate' in url:
                 if dirlst: buildDirectory(dirlst, isVideo=True, chaturbate=True)
             elif pictures:
@@ -71,9 +129,12 @@ class scraper:
             else:
                 if dirlst: buildDirectory(dirlst, isVideo=True)
         except Exception as e:
-            log_utils.log('Error getting next page for %s :: Error: %s' % (site.title(),str(e)), log_utils.LOGERROR)
+            log_utils.log('Error getting next page for %s :: Error: %s' % (site.title(), str(e)), xbmc.LOGERROR)
             xbmcplugin.setContent(kodi.syshandle, 'movies')
-            if 'chaturbate' in url: utils.setView('chaturbate')
-            elif pictures: utils.setView('pictures')
-            else: utils.setView('thumbs')
+            if 'chaturbate' in url:
+                local_utils.setView('chaturbate')
+            elif pictures:
+                local_utils.setView('pictures')
+            else:
+                local_utils.setView('thumbs')
             xbmcplugin.endOfDirectory(kodi.syshandle, cacheToDisc=True)

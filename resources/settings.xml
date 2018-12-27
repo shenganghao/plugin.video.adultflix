@@ -18,7 +18,6 @@
         <setting id="chaturbate_view" label="Chaturbate View" type="number" default="0" visible="true"/>             
         <setting id="picture_view" label="Picture View" type="number" default="0" visible="true"/>    
     </category>
-        
     <category label="[COLOR dodgerblue]Chaturbate[/COLOR]">
         <setting id="chaturbate_start" type="bool" label="[COLOR white]Notify When Monitored User Comes Onlne:[/COLOR]" default="true"/>
         <setting id="chaturbate_subject" type="bool" label="[COLOR white]Show Room Subject Notifications:[/COLOR]" default="true"/>
